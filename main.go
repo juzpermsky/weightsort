@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// Save the plot to a PNG file.
-	if err := p.Save(6*vg.Inch, 6*vg.Inch, "points.png"); err != nil {
+	if err := p.Save(6 * vg.Inch, 6 * vg.Inch, "points.png"); err != nil {
 		panic(err)
 	}
 
@@ -54,23 +54,26 @@ func main() {
 	start := time.Now()
 	createPolarTree(points)
 	elapsed := time.Since(start)
-	fmt.Printf("Tree creation took %s", elapsed)
-	//printPolarTree(rootNode)
+	fmt.Printf("Tree creation took %s\n", elapsed)
+	printPolarTree(rootNode, 3)
+
 }
 
 func XY2RAlpha(point XY) RAlpha {
-	var r float64 = math.Sqrt(point.X*point.X + point.Y*point.Y)
-	var alpha float64 = math.Acos(point.X/r) * 180 / math.Pi
+	var r float64 = math.Sqrt(point.X * point.X + point.Y * point.Y)
+	var alpha float64 = math.Acos(point.X / r) * 180 / math.Pi
 	return RAlpha{R: r, Alpha: alpha}
 }
 
-func printPolarTree(curNode *PolarNode) {
+func printPolarTree(curNode *PolarNode, level int) {
 	fmt.Printf("from %v to %v: R=%v, Alpha=%v, count=%v\n", curNode.From, curNode.To, curNode.MaxPoint.R, curNode.MaxPoint.Alpha, curNode.PointsCount)
-	if curNode.Left != nil {
-		printPolarTree(curNode.Left)
-	}
-	if curNode.Right != nil {
-		printPolarTree(curNode.Right)
+	if (level > 0 )|| (level < 0) {
+		if curNode.Left != nil {
+			printPolarTree(curNode.Left, level - 1)
+		}
+		if curNode.Right != nil {
+			printPolarTree(curNode.Right, level - 1)
+		}
 	}
 }
 
@@ -83,7 +86,7 @@ func createPolarTree(points plotter.XYs) {
 }
 
 func moveDown(rAlpha RAlpha, curNode *PolarNode) {
-	if rAlpha.Alpha < (curNode.To+curNode.From)/2 {
+	if rAlpha.Alpha < (curNode.To + curNode.From) / 2 {
 		if curNode.Left == nil {
 			curNode.Left = &PolarNode{curNode.From, (curNode.To + curNode.From) / 2, rAlpha, 1, nil, nil}
 		} else {
