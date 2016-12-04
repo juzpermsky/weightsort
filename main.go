@@ -1,14 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gonum/plot"
 	"github.com/gonum/plot/plotter"
 	"github.com/gonum/plot/plotutil"
 	"github.com/gonum/plot/vg"
-	"math/rand"
-
-	"fmt"
 	"math"
+	"math/rand"
+	"time"
 )
 
 type XY struct{ X, Y float64 }
@@ -38,7 +38,7 @@ func main() {
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
 
-	points := randomPoints(10)
+	points := randomPoints(1000000)
 
 	err = plotutil.AddScatters(p, points)
 	if err != nil {
@@ -51,8 +51,11 @@ func main() {
 	}
 
 	rootNode = &PolarNode{0, 90, RAlpha{}, 0, nil, nil}
+	start := time.Now()
 	createPolarTree(points)
-	printPolarTree(rootNode)
+	elapsed := time.Since(start)
+	fmt.Printf("Tree creation took %s", elapsed)
+	//printPolarTree(rootNode)
 }
 
 func XY2RAlpha(point XY) RAlpha {
@@ -74,66 +77,40 @@ func printPolarTree(curNode *PolarNode) {
 func createPolarTree(points plotter.XYs) {
 	for _, point := range points {
 		rAlpha := XY2RAlpha(point)
+		//fmt.Println(rAlpha)
 		add2PolarTree(rAlpha, rootNode)
 	}
 }
 
-func add2PolarTree(rAlpha RAlpha, curNode *PolarNode) {
-	curNode.PointsCount++
-	if rAlpha.R > curNode.MaxPoint.R {
-		oldMaxPoint := curNode.MaxPoint
-		curNode.MaxPoint = rAlpha
-		fmt.Printf("%v added in from %v to %v\n",rAlpha,curNode.From, curNode.To)
-		if rAlpha.Alpha < (curNode.To-curNode.From)/2 {
-			if curNode.Left == nil {
-				curNode.Left = &PolarNode{curNode.From, (curNode.To - curNode.From) / 2, rAlpha, 1, nil, nil}
-				fmt.Printf("%v added in from %v to %v\n",rAlpha,curNode.From, (curNode.To - curNode.From) / 2)
-			} else {
-				add2PolarTree(rAlpha, curNode.Left)
-			}
+func moveDown(rAlpha RAlpha, curNode *PolarNode) {
+	if rAlpha.Alpha < (curNode.To+curNode.From)/2 {
+		if curNode.Left == nil {
+			curNode.Left = &PolarNode{curNode.From, (curNode.To + curNode.From) / 2, rAlpha, 1, nil, nil}
 		} else {
-			if curNode.Right == nil {
-				curNode.Right = &PolarNode{(curNode.To - curNode.From) / 2, curNode.To, rAlpha, 1, nil, nil}
-				fmt.Printf("%v added in from %v to %v\n",rAlpha,(curNode.To - curNode.From) / 2, curNode.To)
-			} else {
-				add2PolarTree(rAlpha, curNode.Right)
-			}
-		}
-
-		if oldMaxPoint.R != 0 {
-			fmt.Printf("%v removed in from %v to %v\n",oldMaxPoint,curNode.From, curNode.To)
-			if oldMaxPoint.Alpha < (curNode.To-curNode.From)/2 {
-				if curNode.Left == nil {
-					curNode.Left = &PolarNode{curNode.From, (curNode.To - curNode.From) / 2, oldMaxPoint, 1, nil, nil}
-				} else {
-					add2PolarTree(oldMaxPoint, curNode.Left)
-				}
-			} else {
-				if curNode.Right == nil {
-					curNode.Right = &PolarNode{(curNode.To - curNode.From) / 2, curNode.To, oldMaxPoint, 1, nil, nil}
-				} else {
-					add2PolarTree(oldMaxPoint, curNode.Right)
-				}
-			}
+			add2PolarTree(rAlpha, curNode.Left)
 		}
 	} else {
-		if rAlpha.Alpha < (curNode.To-curNode.From)/2 {
-			if curNode.Left == nil {
-				curNode.Left = &PolarNode{curNode.From, (curNode.To - curNode.From) / 2, rAlpha, 1, nil, nil}
-				fmt.Printf("%v added in from %v to %v\n",rAlpha,curNode.From, (curNode.To - curNode.From) / 2)
-			} else {
-				add2PolarTree(rAlpha, curNode.Left)
-			}
+		if curNode.Right == nil {
+			curNode.Right = &PolarNode{(curNode.To + curNode.From) / 2, curNode.To, rAlpha, 1, nil, nil}
 		} else {
-			if curNode.Right == nil {
-				curNode.Right = &PolarNode{(curNode.To - curNode.From) / 2, curNode.To, rAlpha, 1, nil, nil}
-				fmt.Printf("%v added in from %v to %v\n",rAlpha,(curNode.To - curNode.From) / 2, curNode.To)
-			} else {
-				add2PolarTree(rAlpha, curNode.Right)
-			}
+			add2PolarTree(rAlpha, curNode.Right)
 		}
 	}
-	//	fmt.Println(curNode)
+}
+
+func add2PolarTree(rAlpha RAlpha, curNode *PolarNode) {
+
+	curNode.PointsCount++
+	oldMaxPoint := curNode.MaxPoint
+	if rAlpha.R > curNode.MaxPoint.R {
+		curNode.MaxPoint = rAlpha
+		if oldMaxPoint.R != 0 {
+			moveDown(oldMaxPoint, curNode)
+		}
+	}
+	if curNode.PointsCount > 1 {
+		moveDown(rAlpha, curNode)
+	}
 }
 
 // randomPoints returns some random x, y points.
