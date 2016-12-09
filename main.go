@@ -17,6 +17,7 @@ type RAlpha struct{ R, Alpha float64 }
 type PolarNode struct {
 	From        float64
 	To          float64
+	Split       float64
 	MaxPoint    RAlpha
 	PointsCount int64
 	Left        *PolarNode
@@ -38,7 +39,7 @@ func main() {
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
 
-	points := randomPoints(1000000)
+	points := randomPoints(10)
 
 	err = plotutil.AddScatters(p, points)
 	if err != nil {
@@ -50,7 +51,7 @@ func main() {
 		panic(err)
 	}
 
-	rootNode = &PolarNode{0, 90, RAlpha{}, 0, nil, nil}
+	rootNode = &PolarNode{0, 90, 45, RAlpha{}, 0, nil, nil}
 	start := time.Now()
 	createPolarTree(points)
 	elapsed := time.Since(start)
@@ -67,7 +68,7 @@ func XY2RAlpha(point XY) RAlpha {
 
 func printPolarTree(curNode *PolarNode, level int) {
 	fmt.Printf("from %v to %v: R=%v, Alpha=%v, count=%v\n", curNode.From, curNode.To, curNode.MaxPoint.R, curNode.MaxPoint.Alpha, curNode.PointsCount)
-	if (level > 0 )|| (level < 0) {
+	if (level > 0) || (level < 0) {
 		if curNode.Left != nil {
 			printPolarTree(curNode.Left, level - 1)
 		}
@@ -86,15 +87,15 @@ func createPolarTree(points plotter.XYs) {
 }
 
 func moveDown(rAlpha RAlpha, curNode *PolarNode) {
-	if rAlpha.Alpha < (curNode.To + curNode.From) / 2 {
+	if rAlpha.Alpha < curNode.Split {
 		if curNode.Left == nil {
-			curNode.Left = &PolarNode{curNode.From, (curNode.To + curNode.From) / 2, rAlpha, 1, nil, nil}
+			curNode.Left = &PolarNode{curNode.From, curNode.Split, rAlpha.Alpha, rAlpha, 1, nil, nil}
 		} else {
 			add2PolarTree(rAlpha, curNode.Left)
 		}
 	} else {
 		if curNode.Right == nil {
-			curNode.Right = &PolarNode{(curNode.To + curNode.From) / 2, curNode.To, rAlpha, 1, nil, nil}
+			curNode.Right = &PolarNode{curNode.Split, curNode.To, rAlpha.Alpha, rAlpha, 1, nil, nil}
 		} else {
 			add2PolarTree(rAlpha, curNode.Right)
 		}
