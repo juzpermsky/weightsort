@@ -25,8 +25,25 @@ type PolarNode struct {
 	Right       *PolarNode
 }
 
+type NodeQueue []*PolarNode
+
+func (h NodeQueue) Len() int {
+	return len(h)
+}
+
+func (h *NodeQueue) Push(x *PolarNode) {
+	*h = append(*h, x)
+}
+
+func (h *NodeQueue) Pop() *PolarNode {
+	old := *h
+	x := old[0]
+	*h = old[1 :]
+	return x
+}
+
 var rootNode *PolarNode
-var index int
+var curveLen int = 200
 var maxR float64
 var maxLine plotter.XYs
 
@@ -43,18 +60,19 @@ func main() {
 	p.X.Label.Text = "X"
 	p.Y.Label.Text = "Y"
 
-	points := randomPoints(1000)
+	points := randomPoints(2000)
 
 	rootNode = &PolarNode{0, 90, 45, RAlpha{}, XY{}, 0, nil, nil}
 	start := time.Now()
 	createPolarTree(points)
 	elapsed := time.Since(start)
 	fmt.Printf("Tree creation took %s\n", elapsed)
-	maxLine = make(plotter.XYs, 500)
-	maxLine[0] = rootNode.MaxPointXY
-	maxR = rootNode.MaxPoint.R
-	index = 0
-	printPolarTree(rootNode, 6)
+	maxLine = make(plotter.XYs, curveLen)
+	//maxLine[0] = rootNode.MaxPointXY
+	//maxR = rootNode.MaxPoint.R
+	//printPolarTree(rootNode, 3)
+
+	breathFirstTraverse()
 
 	err = plotutil.AddScatters(p, points)
 	if err != nil {
@@ -80,13 +98,13 @@ func XY2RAlpha(point XY) RAlpha {
 }
 
 func printPolarTree(curNode *PolarNode, level int) {
-	if index < 499 {
-		//if curNode.MaxPoint.R < maxR {
-		//maxR = curNode.MaxPoint.R
-		index++
-		maxLine[index] = curNode.MaxPointXY
-		//}
-	}
+	//if index < 499 {
+	//	//if curNode.MaxPoint.R < maxR {
+	//	//maxR = curNode.MaxPoint.R
+	//	index++
+	//	maxLine[index] = curNode.MaxPointXY
+	//	//}
+	//}
 	fmt.Printf("from %v to %v: R=%v, Alpha=%v, count=%v\n", curNode.From, curNode.To, curNode.MaxPoint.R, curNode.MaxPoint.Alpha, curNode.PointsCount)
 	if (level > 0) || (level < 0) {
 		if curNode.Left != nil {
@@ -154,4 +172,34 @@ func randomPoints(n int) plotter.XYs {
 		pts[i].Y = rand.Float64() * 5
 	}
 	return pts
+}
+
+// обход дерева "в ширину"
+func breathFirstTraverse() {
+	queue := &NodeQueue{rootNode}
+	index := 0
+	for (queue.Len() > 0) && (index < curveLen) {
+		curNode := queue.Pop()
+		// делаем с узлом что нужно
+		//fmt.Println(curNode.MaxPoint)
+		//fmt.Printf("from %v to %v: R=%v, Alpha=%v, count=%v\n", curNode.From, curNode.To, curNode.MaxPoint.R, curNode.MaxPoint.Alpha, curNode.PointsCount)
+		maxLine[index] = curNode.MaxPointXY
+		index++
+		// и втыкаем его детей в конец очереди
+		if curNode.Left != nil {
+			queue.Push(curNode.Left)
+			//fmt.Printf("left %v\n",queue.Len())
+			//fmt.Println(*queue)
+		} else {
+			//fmt.Println("left nil")
+		}
+
+		if curNode.Right != nil {
+			queue.Push(curNode.Right)
+			//fmt.Printf("right %v\n",queue.Len())
+			//fmt.Println(*queue)
+		} else {
+			//fmt.Println("right nil")
+		}
+	}
 }
